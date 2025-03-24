@@ -149,7 +149,6 @@
 }
 .jsa-resetDiv {
     text-align: left;
-	border-radius: 6.5px;
 	border-top: 1px solid #7f99c9;  
     border-right: 1px solid #7f99c9;
     border-bottom: 1px solid #7f99c9;
@@ -179,4 +178,3 @@ svg text {
 svg text::selection {
 	background: none;
 }
-
