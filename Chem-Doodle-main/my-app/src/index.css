@@ -114,8 +114,11 @@ body[data-theme="dark"] {
   border-radius: 5px;
   cursor: pointer;
   font-size: 1rem;
-  margin-left: 1500px;
   transition: background-color 0.3s;
+  position: absolute;
+  right: 5rem;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .toggle-btn:hover {

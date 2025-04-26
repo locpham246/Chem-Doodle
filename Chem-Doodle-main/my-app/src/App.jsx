@@ -1,11 +1,15 @@
-// src/App.jsx
+// src/App.jsx  (or wherever your header lives)
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
-import ChemDrawer from './ChemDrawer';
+
+// Import your logo files!
+import logoLight from './assets/logo1.png';
+import logoDark  from './assets/logo2.png';
+
+import ChemDrawer   from './ChemDrawer';
 import CompoundPage from './CompoundPage';
 
-function App() {
-  // Move theme state here
+export default function App() {
   const [theme, setTheme] = useState('light');
   useEffect(() => {
     const saved = localStorage.getItem('theme') || 'light';
@@ -21,21 +25,27 @@ function App() {
 
   return (
     <>
-      <header className="header">
-        <img src={theme === 'light' ? './src/assets/logo1.png' : './src/assets/logo2.png'} alt="Logo" className="logo" />
+      <header className="header" style={{ zIndex: 10 }}>
+        {/* Wrap logo in a Link so clicking it goes home */}
+        <Link to="/">
+          <img
+            src={theme === 'light' ? logoLight : logoDark}
+            alt="Molecule Map"
+            className="logo"
+          />
+        </Link>
         <nav className="nav-links">
           <Link to="/">Home</Link>
           <Link to="/">Drawer</Link>
           <Link to="/about">About Us</Link>
           <Link to="/contact">Contact</Link>
         </nav>
-        {/* here’s your theme toggle, now in the shared header */}
         <button className="toggle-btn" onClick={toggleTheme}>
           {theme === 'light' ? 'Dark' : 'Light'}
         </button>
       </header>
 
-      <div style={{ paddingTop: '60px' }}>
+      <div style={{ paddingTop: '80px' }}>
         <Routes>
           <Route path="/" element={<ChemDrawer />} />
           <Route path="/compound/:cid" element={<CompoundPage />} />
@@ -44,5 +54,3 @@ function App() {
     </>
   );
 }
-
-export default App;

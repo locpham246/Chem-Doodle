@@ -1,13 +1,14 @@
+// src/ChemDrawer.jsx
 import React, { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import data from "./assets/data.json";  // Array of objects with { cid, smiles }
 import OCL from "openchemlib/full.js";
+import logo1 from './assets/logo1.png';
+import logo2 from './assets/logo2.png';
 
 // --- Helper Functions ---
 
 const canonicalizeSmilesUsingOCL = (smiles) => {
-  const starPlaceholder = "__STAR__";
-  const plusPlaceholder = "__PLUS__";
+  const starPlaceholder = "__STAR__", plusPlaceholder = "__PLUS__";
   const placeholderSmiles = smiles
     .replace(/\*/g, starPlaceholder)
     .replace(/\+/g, plusPlaceholder);
@@ -15,21 +16,17 @@ const canonicalizeSmilesUsingOCL = (smiles) => {
     const mol = OCL.Molecule.fromSmiles(placeholderSmiles);
     mol.dearomatize();
     let canonical = mol.getCanonizedSmiles();
-    canonical = canonical
+    return canonical
       .replace(new RegExp(starPlaceholder, "g"), "*")
       .replace(new RegExp(plusPlaceholder, "g"), "+");
-    return canonical;
-  } catch (err) {
-    console.error("Error canonicalizing SMILES:", err);
+  } catch {
     return smiles;
   }
 };
 
 const convertSmilesToRegex = (smiles) => {
-  const escapeChar = (char) => {
-    if (char === "*" || char === "+") return char;
-    return char.replace(/[-\/\\^$?.()|[\]{}]/g, "\\$&");
-  };
+  const escapeChar = (c) =>
+    c === "*" || c === "+" ? c : c.replace(/[-\/\\^$?.()|[\]{}]/g, "\\$&");
   const escaped = Array.from(smiles).map(escapeChar).join("");
   const pattern = escaped.replace(/\*/g, ".*").replace(/\+/g, ".");
   return new RegExp(`^${pattern}$`, "i");
@@ -43,73 +40,60 @@ export default function ChemDrawer() {
   const [theme, setTheme] = useState("light");
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") || "light";
-    setTheme(savedTheme);
-    document.body.setAttribute("data-theme", savedTheme);
+    // 1) Set up theme
+    const saved = localStorage.getItem("theme") || "light";
+    setTheme(saved);
+    document.body.setAttribute("data-theme", saved);
 
+    // 2) Define the global callback for JSME
     window.jsmeOnLoad = () => {
-      if (
-        window.JSApplet &&
-        window.JSApplet.JSME &&
-        typeof window.JSApplet.JSME === "function"
-      ) {
+      if (!jsmeRef.current && window.JSApplet?.JSME) {
         try {
-          const instance = new window.JSApplet.JSME(
-            containerId,
-            "750px",
-            "450px",
-            { options: "query" }
+          jsmeRef.current = new window.JSApplet.JSME(
+            containerId, "750px", "450px", { options: "query" }
           );
-          jsmeRef.current = instance;
         } catch (err) {
-          console.error("Error initializing JSME:", err);
+          console.error("JSME init error:", err);
         }
-      } else {
-        console.error("Could not find JSME constructor. Check the JSME file.");
       }
     };
 
-    if (!document.getElementById("jsme-script")) {
+    // 3) Load the JSME script (if not already present)
+    const existing = document.getElementById("jsme-script");
+    if (!existing) {
       const script = document.createElement("script");
       script.id = "jsme-script";
       script.src = "/jsme/jsme.nocache.js";
       script.async = true;
-      script.onerror = () =>
-        console.error("Failed to load JSME script from /jsme/jsme.nocache.js");
+      script.onload = () => {
+        // once loaded, call the init callback
+        if (window.jsmeOnLoad) window.jsmeOnLoad();
+      };
       document.body.appendChild(script);
+    } else {
+      // if it's already on the page and the library is loaded, call init immediately
+      if (window.JSApplet?.JSME) {
+        window.jsmeOnLoad();
+      }
     }
   }, []);
 
   const handleParseSmiles = () => {
     if (jsmeRef.current) {
-      const s = jsmeRef.current.smiles();
-      setSmiles(s);
+      setSmiles(jsmeRef.current.smiles());
       setMatches(null);
     }
   };
 
   const handleFindSimilarity = () => {
-    if (!smiles) {
-      console.error("No SMILES available!");
-      return;
-    }
-    const canonical = canonicalizeSmilesUsingOCL(smiles);
-    const wildcard = /[\*\+]/.test(canonical);
-    const matcher = wildcard
-      ? (() => {
-          const re = convertSmilesToRegex(canonical);
-          return (cand) => re.test(cand);
-        })()
-      : (cand) => cand === canonical;
-
-    const found = data.filter((d) => {
-      let c;
-      try {
-        c = canonicalizeSmilesUsingOCL(d.smiles);
-      } catch {
-        c = d.smiles;
-      }
-      return matcher(c);
+    if (!smiles) return console.error("No SMILES!");
+    const canon = canonicalizeSmilesUsingOCL(smiles);
+    const matcher = /[\*\+]/.test(canon)
+      ? convertSmilesToRegex(canon)
+      : canon;
+    const found = data.filter(d => {
+      const cand = canonicalizeSmilesUsingOCL(d.smiles);
+      return matcher instanceof RegExp ? matcher.test(cand) : cand === matcher;
     });
     setMatches(found);
   };
@@ -123,23 +107,6 @@ export default function ChemDrawer() {
 
   return (
     <>
-      <header className="header">
-        <img
-          src={theme === "light" ? "./src/assets/logo1.png" : "./src/assets/logo2.png"}
-          alt="Logo"
-          className="logo"
-        />
-        <nav className="nav-links">
-          <Link to="/">Home</Link>
-          <Link to="#chem-drawer-container">Drawer</Link>
-          <Link to="/about">About Us</Link>
-          <Link to="/contact">Contact</Link>
-        </nav>
-        <button className="toggle-btn" onClick={toggleTheme}>
-          {theme === "light" ? "Dark" : "Light"}
-        </button>
-      </header>
-
       <div className="chem-drawer-container" id="chem-drawer-container">
         <h1>JSME Chemical Drawer</h1>
         <div id={containerId} className="chem-canvas" />
@@ -153,26 +120,22 @@ export default function ChemDrawer() {
         </div>
 
         {smiles && (
-          <p>
-            <strong>SMILES Output:</strong> {smiles}
-          </p>
+          <p><strong>SMILES Output:</strong> {smiles}</p>
         )}
 
         {matches !== null && (
           <div style={{ marginTop: "1rem" }}>
             <h3>Matching Molecules</h3>
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                justifyContent: "center",
-              }}
-            >
+            <div style={{
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "center"
+            }}>
               {matches.length > 0 ? (
-                matches.map((c) => (
-                  <Link
-                    key={c.cid}
-                    to={`/compound/${c.cid}`}
+                matches.map(({ cid }) => (
+                  <a
+                    key={cid}
+                    href={`/compound/${cid}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
@@ -183,20 +146,19 @@ export default function ChemDrawer() {
                       margin: "0.5rem",
                       borderRadius: "4px",
                       display: "inline-block",
+                      cursor: "pointer"
                     }}
                   >
-                    CID: {c.cid}
-                  </Link>
+                    CID: {cid}
+                  </a>
                 ))
               ) : (
-                <div
-                  style={{
-                    border: "1px solid #ccc",
-                    padding: "0.5rem 1rem",
-                    margin: "0.5rem",
-                    borderRadius: "4px",
-                  }}
-                >
+                <div style={{
+                  border: "1px solid #ccc",
+                  padding: "0.5rem 1rem",
+                  margin: "0.5rem",
+                  borderRadius: "4px"
+                }}>
                   No CID found that matches this structure.
                 </div>
               )}
