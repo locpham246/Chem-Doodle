@@ -95,14 +95,10 @@ export default function ChemDrawer() {
       const cand = canonicalizeSmilesUsingOCL(d.smiles);
       return matcher instanceof RegExp ? matcher.test(cand) : cand === matcher;
     });
-    setMatches(found);
-  };
+    const limitedResults = found.slice(0, 12); //limit 12 datas
 
-  const toggleTheme = () => {
-    const next = theme === "light" ? "dark" : "light";
-    setTheme(next);
-    localStorage.setItem("theme", next);
-    document.body.setAttribute("data-theme", next);
+    setMatches(limitedResults);
+    console.log("Found candidates:", limitedResults);
   };
 
   return (
@@ -120,48 +116,57 @@ export default function ChemDrawer() {
         </div>
 
         {smiles && (
-          <p><strong>SMILES Output:</strong> {smiles}</p>
+          <div className="match-results-container1">
+            <p>
+              <strong>SMILES Output:</strong> {smiles}
+            </p>
+          </div>
         )}
 
         {matches !== null && (
-          <div style={{ marginTop: "1rem" }}>
-            <h3>Matching Molecules</h3>
-            <div style={{
-              display: "flex",
-              flexWrap: "wrap",
-              justifyContent: "center"
-            }}>
-              {matches.length > 0 ? (
-                matches.map(({ cid }) => (
-                  <a
-                    key={cid}
-                    href={`/compound/${cid}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      textDecoration: "none",
-                      color: "inherit",
-                      border: "1px solid #ccc",
-                      padding: "0.5rem 1rem",
-                      margin: "0.5rem",
-                      borderRadius: "4px",
-                      display: "inline-block",
-                      cursor: "pointer"
-                    }}
-                  >
-                    CID: {cid}
-                  </a>
-                ))
-              ) : (
-                <div style={{
-                  border: "1px solid #ccc",
-                  padding: "0.5rem 1rem",
-                  margin: "0.5rem",
-                  borderRadius: "4px"
-                }}>
-                  No CID found that matches this structure.
-                </div>
-              )}
+            <div
+            className="matches-section"
+            style={{ position: 'relative', zIndex: 1001 }}
+          >
+            <div className="match-results-container2">
+              <h3>Matching Molecules</h3>
+              <div style={{
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "center"
+              }}>
+                {matches.length > 0 ? (
+                  matches.map(({ cid }) => (
+                    <a
+                      key={cid}
+                      href={`/compound/${cid}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        textDecoration: "none",
+                        color: "inherit",
+                        border: "1px solid #ccc",
+                        padding: "0.5rem 1rem",
+                        margin: "0.5rem",
+                        borderRadius: "4px",
+                        display: "inline-block",
+                        cursor: "pointer"
+                      }}
+                    >
+                      CID: {cid}
+                    </a>
+                  ))
+                ) : (
+                  <div style={{
+                    border: "1px solid #ccc",
+                    padding: "0.5rem 1rem",
+                    margin: "0.5rem",
+                    borderRadius: "4px"
+                  }}>
+                    No CID found that matches this structure.
+                  </div>
+            )}
+              </div>
             </div>
           </div>
         )}
