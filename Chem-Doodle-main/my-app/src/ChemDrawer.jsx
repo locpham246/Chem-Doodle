@@ -2,8 +2,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import data from "./assets/data.json";  // Array of objects with { cid, smiles }
 import OCL from "openchemlib/full.js";
-import logo1 from './assets/logo1.png';
-import logo2 from './assets/logo2.png';
 
 // --- Helper Functions ---
 
@@ -26,7 +24,7 @@ const canonicalizeSmilesUsingOCL = (smiles) => {
 
 const convertSmilesToRegex = (smiles) => {
   const escapeChar = (c) =>
-    c === "*" || c === "+" ? c : c.replace(/[-\/\\^$?.()|[\]{}]/g, "\\$&");
+    c === "*" || c === "+" ? c : c.replace(/[-/\\^$?.()|[\]{}]/g, "\\$&");
   const escaped = Array.from(smiles).map(escapeChar).join("");
   const pattern = escaped.replace(/\*/g, ".*").replace(/\+/g, ".");
   return new RegExp(`^${pattern}$`, "i");
@@ -37,7 +35,7 @@ export default function ChemDrawer() {
   const jsmeRef = useRef(null);
   const [smiles, setSmiles] = useState("");
   const [matches, setMatches] = useState(null);
-  const [theme, setTheme] = useState("light");
+  const [, setTheme] = useState("light");
 
   useEffect(() => {
     // 1) Set up theme
@@ -88,7 +86,7 @@ export default function ChemDrawer() {
   const handleFindSimilarity = () => {
     if (!smiles) return console.error("No SMILES!");
     const canon = canonicalizeSmilesUsingOCL(smiles);
-    const matcher = /[\*\+]/.test(canon)
+    const matcher = /[*+]/.test(canon)
       ? convertSmilesToRegex(canon)
       : canon;
     const found = data.filter(d => {
