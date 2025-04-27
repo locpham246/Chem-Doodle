@@ -197,13 +197,13 @@ body[data-theme="light"] .chem-drawer-container {
 }
 
 .parse-btn {
-  background-color: #28a745;
+  background-color: #3f6dc2;
   color: white;
   padding: 10px 15px;
   border-radius: 5px;
   border: none;
   cursor: pointer;
-  margin-left: 200px;
+  margin-left: 20px;
   transition: background-color 0.3s;
 }
 

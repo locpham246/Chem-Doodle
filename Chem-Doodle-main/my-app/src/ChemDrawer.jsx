@@ -3,8 +3,6 @@ import React, { useEffect, useRef, useState } from "react";
 import data from "./assets/data.json";  // Array of objects with { cid, smiles }
 import OCL from "openchemlib/full.js";
 
-// --- Helper Functions ---
-
 const canonicalizeSmilesUsingOCL = (smiles) => {
   const starPlaceholder = "__STAR__", plusPlaceholder = "__PLUS__";
   const placeholderSmiles = smiles
@@ -38,12 +36,10 @@ export default function ChemDrawer() {
   const [, setTheme] = useState("light");
 
   useEffect(() => {
-    // 1) Set up theme
     const saved = localStorage.getItem("theme") || "light";
     setTheme(saved);
     document.body.setAttribute("data-theme", saved);
 
-    // 2) Define the global callback for JSME
     window.jsmeOnLoad = () => {
       if (!jsmeRef.current && window.JSApplet?.JSME) {
         try {
@@ -56,7 +52,6 @@ export default function ChemDrawer() {
       }
     };
 
-    // 3) Load the JSME script (if not already present)
     const existing = document.getElementById("jsme-script");
     if (!existing) {
       const script = document.createElement("script");
@@ -64,12 +59,10 @@ export default function ChemDrawer() {
       script.src = "/jsme/jsme.nocache.js";
       script.async = true;
       script.onload = () => {
-        // once loaded, call the init callback
         if (window.jsmeOnLoad) window.jsmeOnLoad();
       };
       document.body.appendChild(script);
     } else {
-      // if it's already on the page and the library is loaded, call init immediately
       if (window.JSApplet?.JSME) {
         window.jsmeOnLoad();
       }
@@ -109,7 +102,10 @@ export default function ChemDrawer() {
             Parse to SMILES
           </button>
           <button onClick={handleFindSimilarity} className="parse-btn">
-            Find Similarity
+            Find Similarity For Matching
+          </button>
+          <button onClick={handleFindSimilarity} className="parse-btn">
+            Find Similarity For Fingerprint
           </button>
         </div>
 
