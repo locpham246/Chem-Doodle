@@ -1,4 +1,3 @@
-// src/ChemDrawer.jsx
 import React, { useEffect, useRef, useState } from "react";
 import data from "./assets/data.json";  // Array of objects with { cid, smiles }
 import OCL from "openchemlib/full.js";

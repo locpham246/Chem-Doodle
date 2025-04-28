@@ -16,7 +16,7 @@ export default function CompoundPage() {
         const propJson = await propRes.json();
         const props = propJson.PropertyTable?.Properties?.[0] || {};
 
-        // Fetch synonyms (we’ll use the first one as “name”)
+        // Fetch synonyms 
         const synUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/synonyms/JSON`;
         const synRes = await fetch(synUrl);
         const synJson = await synRes.json();
@@ -39,7 +39,6 @@ export default function CompoundPage() {
   return (
     <>
       <header className="header">
-        {/* keep your nav/logo here if you’d like site-wide nav */}
       </header>
 
       <div className="chem-drawer-container">

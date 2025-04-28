@@ -50,7 +50,7 @@ def compute_similarity(candidate_blob_series: pd.Series) -> pd.Series:
 def main():
     spark = SparkSession.builder \
         .appName("CassandraSimilarityQuery") \
-        .config("spark.cassandra.connection.host", "127.0.0.1") \
+        .config("spark.cassandra.connection.host", "96.125.118.113") \
         .config("spark.jars.packages", "com.datastax.spark:spark-cassandra-connector_2.12:3.2.0") \
         .getOrCreate()
     
