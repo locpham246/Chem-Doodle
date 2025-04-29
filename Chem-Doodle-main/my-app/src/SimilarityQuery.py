@@ -46,7 +46,7 @@ def main():
         .options(keyspace="drug_discovery", table="compounds") \
         .load() \
         .filter("cid > 0 AND cid < 10000000") \
-        .limit(10000)
+        .limit(2000)
 
     # register UDF after query_bits is set
     compute_similarity_udf = udf(compute_similarity, DoubleType())
@@ -56,10 +56,10 @@ def main():
 
     df_with_similarity = df.withColumn("similarity", compute_similarity_udf(col("fingerprint")))
     result_df = df_with_similarity \
-        .filter(col("similarity") > 0.005) \
+        .filter(col("similarity") > 0.2) \
         .orderBy(col("similarity").desc()) \
         .select("cid") \
-        .limit(10000)
+        .limit(12)
 
     # collect the top CIDs
     cids = [row.cid for row in result_df.collect()]

@@ -1,44 +1,28 @@
 import React, { useEffect, useRef, useState } from "react";
-import data from "./assets/data.json";  // Array of objects with { cid, smiles }
-import OCL from "openchemlib/full.js";
-
-const canonicalizeSmilesUsingOCL = (smiles) => {
-  const starPlaceholder = "__STAR__", plusPlaceholder = "__PLUS__";
-  const placeholderSmiles = smiles
-    .replace(/\*/g, starPlaceholder)
-    .replace(/\+/g, plusPlaceholder);
-  try {
-    const mol = OCL.Molecule.fromSmiles(placeholderSmiles);
-    mol.dearomatize();
-    let canonical = mol.getCanonizedSmiles();
-    return canonical
-      .replace(new RegExp(starPlaceholder, "g"), "*")
-      .replace(new RegExp(plusPlaceholder, "g"), "+");
-  } catch {
-    return smiles;
-  }
-};
-
-const convertSmilesToRegex = (smiles) => {
-  const escapeChar = (c) =>
-    c === "*" || c === "+" ? c : c.replace(/[-/\\^$?.()|[\]{}]/g, "\\$&");
-  const escaped = Array.from(smiles).map(escapeChar).join("");
-  const pattern = escaped.replace(/\*/g, ".*").replace(/\+/g, ".");
-  return new RegExp(`^${pattern}$`, "i");
-};
+// Removed data.json import as it seems unused now
+// import data from "./assets/data.json";
+// Removed OCL and Regex functions if only used for the old client-side matching
+// import OCL from "openchemlib/full.js";
+// const canonicalizeSmilesUsingOCL = ...
+// const convertSmilesToRegex = ...
 
 export default function ChemDrawer() {
   const containerId = "jsme_container";
   const jsmeRef = useRef(null);
   const [smiles, setSmiles] = useState("");
+  // 'matches' state will now hold an array of {cid: num} OR {cid: num, similarity: num}
   const [matches, setMatches] = useState(null);
-  const [, setTheme] = useState("light");
+  const [isLoading, setIsLoading] = useState(false); // Added loading state
+  const [error, setError] = useState(null); // Added error state
+  const [, setTheme] = useState("light"); // Keep theme logic if needed
 
   useEffect(() => {
+    // Theme logic remains the same
     const saved = localStorage.getItem("theme") || "light";
     setTheme(saved);
     document.body.setAttribute("data-theme", saved);
 
+    // JSME initialization logic remains the same
     window.jsmeOnLoad = () => {
       if (!jsmeRef.current && window.JSApplet?.JSME) {
         try {
@@ -47,6 +31,7 @@ export default function ChemDrawer() {
           );
         } catch (err) {
           console.error("JSME init error:", err);
+          setError("Failed to load chemical drawer."); // Set error state
         }
       }
     };
@@ -68,53 +53,121 @@ export default function ChemDrawer() {
     }
   }, []);
 
+  // Parse SMILES from drawer
   const handleParseSmiles = () => {
     if (jsmeRef.current) {
-      setSmiles(jsmeRef.current.smiles());
-      setMatches(null);
+      const currentSmiles = jsmeRef.current.smiles();
+      setSmiles(currentSmiles);
+      setMatches(null); // Clear matches when structure changes
+      setError(null); // Clear errors
     }
   };
 
-  const handleFindSimilarity = () => {
-    if (!smiles) return console.error("No SMILES!");
-    const canon = canonicalizeSmilesUsingOCL(smiles);
-    const matcher = /[*+]/.test(canon)
-      ? convertSmilesToRegex(canon)
-      : canon;
-    const found = data.filter(d => {
-      const cand = canonicalizeSmilesUsingOCL(d.smiles);
-      return matcher instanceof RegExp ? matcher.test(cand) : cand === matcher;
-    });
-    setMatches(found.slice(0, 12));
-    console.log("Found candidates:", found.slice(0, 12));
-  };
-
+  // --- Fingerprint Similarity (UPDATED for consistency) ---
   const handleFindFingerprint = async () => {
     if (!smiles) {
       console.error("No SMILES!");
+      setError("Please generate a SMILES string first."); // Use setError
       return;
     }
 
-    setMatches(null);
+    // --- Added Loading/Error State Handling ---
+    setIsLoading(true); // Set loading
+    setMatches(null);   // Clear previous matches
+    setError(null);     // Clear previous errors
+    // --- End Added ---
+
     try {
-      const res = await fetch('/api/similarity', {
+      const res = await fetch('/api/similarity', { // Endpoint for fingerprint
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ smiles })
       });
+
+      // --- Improved Error Handling ---
       if (!res.ok) {
-        const err = await res.json();
-        console.error("Similarity API error:", err);
-        return;
+        let errorData;
+        try {
+            // Try to parse potential JSON error body
+            errorData = await res.json();
+        } catch (e) {
+            // If no JSON body, use the status text
+            errorData = { detail: res.statusText };
+        }
+        console.error("Fingerprint API error:", errorData);
+        // Set the error state for the UI
+        setError(`Fingerprint search failed: ${errorData?.detail || errorData?.error || res.statusText}`);
+        // No need to return here, finally block will handle loading state
+      } else {
+        // --- Success Handling (remains the same) ---
+        // Expects { cids: [...] }
+        const { cids } = await res.json();
+        // Map to the format needed by the display logic [{cid: ...}]
+        const top = cids.slice(0, 12).map(cid => ({ cid }));
+        setMatches(top);
+        console.log("Fingerprint candidates:", top);
       }
-      const { cids } = await res.json();
-      const top = cids.slice(0, 12).map(cid => ({ cid }));
-      setMatches(top);
-      console.log("Fingerprint candidates:", top);
+      // --- End Improved Error Handling ---
+
     } catch (e) {
-      console.error("Fetch failed:", e);
+      console.error("Fetch failed (Fingerprint):", e);
+      // Set error state for fetch errors
+      setError("Failed to fetch fingerprint similarity. Check network or server logs.");
+    } finally {
+      // --- Added Finally Block ---
+      // Ensure loading state is turned off whether request succeeded or failed
+      setIsLoading(false);
+      // --- End Added ---
     }
   };
+
+  // --- NEW: Structure Similarity (SMILES based Backend Call) ---
+  const handleFindSmilesSimilarity = async () => {
+    if (!smiles) {
+      console.error("No SMILES!");
+      setError("Please generate a SMILES string first.");
+      return;
+    }
+
+    setIsLoading(true); // Set loading
+    setMatches(null);   // Clear previous matches
+    setError(null);     // Clear previous errors
+
+    try {
+      // Fetch from the NEW backend endpoint
+      const res = await fetch('/api/similarity_smiles', { // *** NEW ENDPOINT ***
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ smiles }) // Send the current SMILES
+      });
+
+      if (!res.ok) {
+        // Try to parse error JSON, otherwise use status text
+        let errorData;
+        try {
+            errorData = await res.json();
+        } catch (e) {
+            errorData = { detail: res.statusText };
+        }
+        console.error("SMILES Similarity API error:", errorData);
+        // Use errorData.error if available from Python script, otherwise detail/statusText
+        setError(`SMILES similarity search failed: ${errorData?.error || errorData?.detail || res.statusText}`);
+        return; // Important: Return early on error
+      }
+
+      // Expects { results: [{cid: ..., similarity: ...}, ...] } from the new Python script
+      const { results } = await res.json();
+      setMatches(results); // Store the array [{cid:..., similarity:...}] directly
+      console.log("SMILES Similarity candidates:", results);
+
+    } catch (e) {
+      console.error("Fetch failed (SMILES Similarity):", e);
+      setError("Failed to fetch SMILES similarity. Check network or server logs.");
+    } finally {
+      setIsLoading(false); // Clear loading regardless of success/error
+    }
+  };
+
 
   return (
     <>
@@ -125,34 +178,48 @@ export default function ChemDrawer() {
           <button onClick={handleParseSmiles} className="parse-btn">
             Parse to SMILES
           </button>
-          <button onClick={handleFindSimilarity} className="parse-btn">
+          {/* Removed client-side matching button */}
+          {/* <button onClick={handleFindSimilarity} className="parse-btn">
             Find Similarity For Matching
+          </button> */}
+          <button onClick={handleFindFingerprint} className="parse-btn" disabled={isLoading}>
+            Find by Fingerprint
           </button>
-          <button onClick={handleFindFingerprint} className="parse-btn">
-            Find Similarity For Fingerprint
+          {/* --- NEW BUTTON --- */}
+          <button onClick={handleFindSmilesSimilarity} className="parse-btn" disabled={isLoading}>
+            Find by Structure (SMILES)
           </button>
         </div>
 
-        {smiles && (
+        {/* Display Loading Indicator */}
+        {isLoading && <div className="loading-indicator">Searching...</div>}
+
+        {/* Display Error Message */}
+        {error && <div className="error-message">Error: {error}</div>}
+
+
+        {smiles && !isLoading && ( // Show SMILES only when not loading
           <div className="match-results-container1">
             <p><strong>SMILES Output:</strong> {smiles}</p>
           </div>
         )}
 
-        {matches !== null && (
+        {/* Updated Results Display */}
+        {matches !== null && !isLoading && ( // Show matches only when not loading
           <div className="matches-section" style={{ position: 'relative', zIndex: 1001 }}>
             <div className="match-results-container2">
-              <h3>Matching Molecules</h3>
+              <h3>Matching Molecules {matches.length > 0 ? `(${matches.length} found)` : ''}</h3>
               <div style={{
                 display: "flex",
                 flexWrap: "wrap",
                 justifyContent: "center"
               }}>
                 {matches.length > 0 ? (
-                  matches.map(({ cid }) => (
+                  // Map over matches, check if similarity score exists
+                  matches.map((match) => (
                     <a
-                      key={cid}
-                      href={`/compound/${cid}`}
+                      key={match.cid} // Use CID as key
+                      href={`/compound/${match.cid}`} // Link remains the same
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
@@ -163,20 +230,28 @@ export default function ChemDrawer() {
                         margin: "0.5rem",
                         borderRadius: "4px",
                         display: "inline-block",
-                        cursor: "pointer"
+                        cursor: "pointer",
+                        textAlign: "center" // Center text
                       }}
                     >
-                      CID: {cid}
+                      {/* Display CID and Similarity if available */}
+                      <div>CID: {match.cid}</div>
+                      {match.similarity !== undefined && (
+                         <div style={{ fontSize: '0.8em', marginTop: '0.2em' }}>
+                           Similarity: {match.similarity.toFixed(3)}
+                         </div>
+                      )}
                     </a>
                   ))
                 ) : (
+                  // Message when no matches are found
                   <div style={{
                     border: "1px solid #ccc",
                     padding: "0.5rem 1rem",
                     margin: "0.5rem",
                     borderRadius: "4px"
                   }}>
-                    No CID found that matches this structure.
+                    No similar structures found for the given criteria.
                   </div>
                 )}
               </div>
