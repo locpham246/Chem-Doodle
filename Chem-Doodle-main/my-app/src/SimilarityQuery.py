@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import sys
 import json
 import time
@@ -20,7 +19,6 @@ def smiles_to_fingerprint_blob(smiles_str):
         print(f"Error processing {smiles_str}: {e}", file=sys.stderr)
     return None
 
-# Precompute the query fingerprint once
 query_smiles = None
 query_blob = None
 query_bits = None
@@ -48,7 +46,6 @@ def main():
         .filter("cid > 0 AND cid < 10000000") \
         .limit(2000)
 
-    # register UDF after query_bits is set
     compute_similarity_udf = udf(compute_similarity, DoubleType())
 
     df.cache()
@@ -61,10 +58,8 @@ def main():
         .select("cid") \
         .limit(12)
 
-    # collect the top CIDs
     cids = [row.cid for row in result_df.collect()]
 
-    # output JSON array of CIDs
     print(json.dumps({ "cids": cids }))
 
     spark.stop()
