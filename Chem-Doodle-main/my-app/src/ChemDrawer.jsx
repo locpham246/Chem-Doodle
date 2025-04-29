@@ -85,10 +85,35 @@ export default function ChemDrawer() {
       const cand = canonicalizeSmilesUsingOCL(d.smiles);
       return matcher instanceof RegExp ? matcher.test(cand) : cand === matcher;
     });
-    const limitedResults = found.slice(0, 12); //limit 12 datas
+    setMatches(found.slice(0, 12));
+    console.log("Found candidates:", found.slice(0, 12));
+  };
 
-    setMatches(limitedResults);
-    console.log("Found candidates:", limitedResults);
+  const handleFindFingerprint = async () => {
+    if (!smiles) {
+      console.error("No SMILES!");
+      return;
+    }
+
+    setMatches(null);
+    try {
+      const res = await fetch('/api/similarity', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ smiles })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        console.error("Similarity API error:", err);
+        return;
+      }
+      const { cids } = await res.json();
+      const top = cids.slice(0, 12).map(cid => ({ cid }));
+      setMatches(top);
+      console.log("Fingerprint candidates:", top);
+    } catch (e) {
+      console.error("Fetch failed:", e);
+    }
   };
 
   return (
@@ -103,24 +128,19 @@ export default function ChemDrawer() {
           <button onClick={handleFindSimilarity} className="parse-btn">
             Find Similarity For Matching
           </button>
-          <button onClick={handleFindSimilarity} className="parse-btn">
+          <button onClick={handleFindFingerprint} className="parse-btn">
             Find Similarity For Fingerprint
           </button>
         </div>
 
         {smiles && (
           <div className="match-results-container1">
-            <p>
-              <strong>SMILES Output:</strong> {smiles}
-            </p>
+            <p><strong>SMILES Output:</strong> {smiles}</p>
           </div>
         )}
 
         {matches !== null && (
-            <div
-            className="matches-section"
-            style={{ position: 'relative', zIndex: 1001 }}
-          >
+          <div className="matches-section" style={{ position: 'relative', zIndex: 1001 }}>
             <div className="match-results-container2">
               <h3>Matching Molecules</h3>
               <div style={{
@@ -158,7 +178,7 @@ export default function ChemDrawer() {
                   }}>
                     No CID found that matches this structure.
                   </div>
-            )}
+                )}
               </div>
             </div>
           </div>
