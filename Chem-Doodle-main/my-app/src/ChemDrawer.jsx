@@ -1,10 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-// Removed data.json import as it seems unused now
-// import data from "./assets/data.json";
-// Removed OCL and Regex functions if only used for the old client-side matching
-// import OCL from "openchemlib/full.js";
-// const canonicalizeSmilesUsingOCL = ...
-// const convertSmilesToRegex = ...
+
 
 export default function ChemDrawer() {
   const containerId = "jsme_container";
