@@ -1,4 +1,5 @@
-Chem-Doodle: Chemical Structure Drawing & Similarity Search Web App
+Chem-Doodle: Chemical Structure Drawing & Similarity Search Web App.
+
 This project is a web application for drawing chemical structures and searching for similar compounds using two approaches:
 
 Fingerprint-based Similarity
