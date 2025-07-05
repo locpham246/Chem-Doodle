@@ -1,4 +1,4 @@
-#**Chem-Doodle: Chemical Structure Drawing & Similarity Search Web App.**
+# **Chem-Doodle: Chemical Structure Drawing & Similarity Search Web App.**
 
 This project is a web application for drawing chemical structures and searching for similar compounds using two approaches:</br>
 
@@ -32,7 +32,7 @@ Choose either fingerprint or SMILES-based similarity.</br>
 The app sends your SMILES to the backend, which invokes Python scripts to perform the actual search.</br>
 Results are displayed back in the UI. </br>
 
-#**Tech Stack:** </br>
+# **Tech Stack:** </br>
 **Frontend:** </br>
 React, Vite, JSME (JavaScript Molecular Editor). </br>
 **Backend:** </br>
