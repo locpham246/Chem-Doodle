@@ -20,7 +20,7 @@ Built with React and Vite for fast development, with clear state handling for lo
 **Error Handling:** </br>
 Both client and server provide user-friendly error messages and handle failed backend calls gracefully.</br>
 
-#**How It Works** </br>
+# **How It Works:** </br>
 **Draw Structure:** </br>
 Use the in-browser editor to sketch a molecule. 
 
